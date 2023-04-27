@@ -1,0 +1,53 @@
+AddEventHandler('esx:enteredVehicle', function(vehicle, plate, seat, displayName, netId)
+    SendNUIMessage({inveh = true})
+    DisplayRadar(true) 
+    SetRadarZoom(1100)
+    local isinveh = true
+
+    Citizen.CreateThread(function()
+        while isinveh do
+            Citizen.Wait(85)
+
+            local veh = GetVehiclePedIsUsing(PlayerPedId())
+            local speed = GetEntitySpeed(vehicle) * 3.6
+            local model = GetEntityModel(vehicle)
+            local maxSpeed = GetVehicleModelEstimatedMaxSpeed(model)
+            local curFuel = ESX.Math.Round(GetVehicleFuelLevel(vehicle))
+            local rpm = GetVehicleCurrentRpm(vehicle)
+            local currentGear = GetVehicleCurrentGear(vehicle)
+            local vehicleVal, vehicleLights, vehicleHighlights = GetVehicleLightsState(vehicle)
+            local vehicleIsLightsOn
+
+            if vehicleLights == 1 and vehicleHighlights == 0 and GetIsVehicleEngineRunning(vehicle) then
+                vehicleIsLightsOn = 'normal'
+            elseif vehicleHighlights == 1 then
+                vehicleIsLightsOn = 'high'
+            else
+                vehicleIsLightsOn = 'off'
+            end
+
+            if speed < 1 then
+                Citizen.Wait(500)
+                SendNUIMessage({
+                    curgear = "1",
+                    currpm = "0",
+                    currentFuel = curFuel,
+                    lightstate = vehicleIsLightsOn,
+                    motor = GetIsVehicleEngineRunning(vehicle),
+                    speed = "0",
+                    locked = GetVehicleDoorLockStatus(vehicle) == 1 or GetVehicleDoorLockStatus(vehicle) == 0
+                })
+            end
+
+            SendNUIMessage({
+                curgear = currentGear,
+                currpm = rpm,
+                currentFuel = curFuel,
+                lightstate = vehicleIsLightsOn,
+                motor = GetIsVehicleEngineRunning(vehicle),
+                speed = ESX.Math.Round(speed),
+                locked = GetVehicleDoorLockStatus(vehicle) == 1 or GetVehicleDoorLockStatus(vehicle) == 0
+            })
+        end
+    end)
+end)
