@@ -1,0 +1,71 @@
+-- Initialisierung
+local REFRESH_DELAY = 70
+local REFRESH_DELAY_IN_VEHICLE = 5
+local refresh = true
+local toggle = true
+
+-- Hauptfunktion
+Citizen.CreateThread(function()
+    while true do
+        -- Aktualisierungsintervall anpassen, wenn Spieler in einem Fahrzeug ist
+        local ped = PlayerPedId()
+        local inVehicle = IsPedInAnyVehicle(ped)
+        local refreshDelay = inVehicle and REFRESH_DELAY_IN_VEHICLE or REFRESH_DELAY
+
+        if toggle and inVehicle and refresh then
+            -- Fahrzeugdaten sammeln
+            local veh = GetVehiclePedIsUsing(ped)
+            local speed = GetEntitySpeed(veh)
+            local kmh = speed * 3.6
+            local model = GetEntityModel(veh)
+            local maxSpeed = GetVehicleModelEstimatedMaxSpeed(model)
+            local curFuel = ESX.Math.Round(GetVehicleFuelLevel(veh))
+            local rpm = GetVehicleCurrentRpm(veh)
+            local currentGear = GetVehicleCurrentGear(veh)
+            local vehicleVal, vehicleLights, vehicleHighlights = GetVehicleLightsState(veh)
+            local vehicleIsLightsOn
+
+
+
+            
+            -- Lichtstatus ermitteln
+            if vehicleLights == 1 and vehicleHighlights == 0 and GetIsVehicleEngineRunning(veh) then
+                vehicleIsLightsOn = 'normal'
+            elseif vehicleLights == 1 and vehicleHighlights == 1 or vehicleLights == 0 and vehicleHighlights == 1 then
+                vehicleIsLightsOn = 'high'
+            else
+                vehicleIsLightsOn = 'off'
+            end
+            
+            -- Daten an UI senden
+            if kmh < 1 then
+                refresh = false
+                refreshDelay = 350
+                SendNUIMessage({
+                    speed = "0",
+                    currentFuel = "0",
+                    currpm = rpm,
+                    lightstate = vehicleIsLightsOn,
+                    motor = GetIsVehicleEngineRunning(veh),
+                    locked = GetVehicleDoorLockStatus(veh) == 1 or GetVehicleDoorLockStatus(veh) == 0
+                })
+            else
+                Citizen.Wait(5)
+                SendNUIMessage({
+                    curgear = currentGear,
+                    currpm = rpm,
+                    currentFuel = curFuel,
+                    lightstate = vehicleIsLightsOn,
+                    motor = GetIsVehicleEngineRunning(veh),
+                    speed = ESX.Math.Round(kmh),
+                    locked = GetVehicleDoorLockStatus(veh) == 1 or GetVehicleDoorLockStatus(veh) == 0
+                })
+             
+            end
+        else
+            refresh = true
+
+        end
+        Wait(REFRESH_DELAY)
+    end
+end)
